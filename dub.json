@@ -8,6 +8,7 @@
 	"name": "cfitsio-d",
 	"targetType": "library",
 	"lflags": [
-		"-lcfitsio"
+		"/LIBPATH:lib",
+		"cfitsio.lib"
 	]
 }

@@ -14,3 +14,12 @@ cfitsio-d-test-*
 *.o
 *.obj
 *.lst
+# Ignore generated files and local libraries
+lib/
+*.o
+*.obj
+*.dll
+*.so
+*.dylib
+*.exe
+*.fits
