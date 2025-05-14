@@ -1,0 +1,13 @@
+{
+	"authors": [
+		"chris"
+	],
+	"copyright": "Copyright © 2025, chris",
+	"description": "A minimal D application.",
+	"license": "proprietary",
+	"name": "cfitsio-d",
+	"targetType": "library",
+	"lflags": [
+		"-lcfitsio"
+	]
+}

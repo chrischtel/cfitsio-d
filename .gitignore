@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/cfitsio-d
+cfitsio-d.so
+cfitsio-d.dylib
+cfitsio-d.dll
+cfitsio-d.a
+cfitsio-d.lib
+cfitsio-d-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
