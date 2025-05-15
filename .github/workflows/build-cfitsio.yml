@@ -21,9 +21,9 @@ jobs:
 
       - name: Download CFITSIO
         run: |
-          wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio${{ github.event.inputs.cfitsio_version }}.tar.gz -O cfitsio.tar.gz
-          tar xzf cfitsio.tar.gz
-          mv cfitsio* cfitsio
+            wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio-${{ github.event.inputs.cfitsio_version }}.tar.gz -O cfitsio.tar.gz
+            tar xzf cfitsio.tar.gz
+            mv cfitsio-* cfitsio
 
       - name: Build CFITSIO
         run: |
@@ -49,7 +49,7 @@ jobs:
     steps:
       - name: Download CFITSIO
         run: |
-          curl -L https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio${{ github.event.inputs.cfitsio_version }}.tar.gz -o cfitsio.tar.gz
+          curl -L https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio-${{ github.event.inputs.cfitsio_version }}.tar.gz -o cfitsio.tar.gz
           tar xzf cfitsio.tar.gz
           mv cfitsio* cfitsio
 
@@ -89,7 +89,7 @@ jobs:
       - name: Download and Build CFITSIO
         shell: msys2 {0}
         run: |
-          wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio${{ github.event.inputs.cfitsio_version }}.tar.gz -O cfitsio.tar.gz
+          wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio-${{ github.event.inputs.cfitsio_version }}.tar.gz -O cfitsio.tar.gz
           tar xzf cfitsio.tar.gz
           mv cfitsio* cfitsio
           cd cfitsio
