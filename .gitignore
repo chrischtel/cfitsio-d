@@ -17,6 +17,7 @@ cfitsio-d-test-*
 # Ignore generated files and local libraries
 lib/
 *.o
+*.lib
 *.obj
 *.dll
 *.so
