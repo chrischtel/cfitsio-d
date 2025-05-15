@@ -75,47 +75,54 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - name: Install MSYS2
-        uses: msys2/setup-msys2@v2
+      - name: Set up Python (for CMake)
+        uses: actions/setup-python@v5
         with:
-          update: true
-          install: >-
-            base-devel
-            mingw-w64-x86_64-toolchain
-            make
-            tar
-            wget
+            python-version: '3.x'
 
-      - name: Download and Build CFITSIO
-        shell: msys2 {0}
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Download and extract zlib
         run: |
-            wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio-${{ github.event.inputs.cfitsio_version }}.tar.gz -O cfitsio.tar.gz
-            tar xzf cfitsio.tar.gz
-            # Find the extracted directory dynamically
-            extracted_dir=$(find . -maxdepth 1 -type d -name "cfitsio*")
-            if [[ -z "$extracted_dir" ]]; then
-            echo "Error: Extracted directory not found!" >&2
-            exit 1
-            fi
-            mv "$extracted_dir" cfitsio
-            cd cfitsio
-            ./configure --prefix=$PWD/../cfitsio-install
-            make -j$(nproc)
-            make install
+            curl -L https://zlib.net/zlib1213.zip -o zlib.zip
+            tar -xf zlib.zip || powershell -Command "Expand-Archive -Path zlib.zip -DestinationPath ."
+            ren zlib-* zlib
+
+      - name: Build zlib
+        run: |
+            mkdir zlib_build
+            cd zlib_build
+            cmake ../zlib -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}\zlib_install
+            cmake --build . --config Release
+            cmake --install . --config Release
+
+      - name: Download and extract CFITSIO
+        run: |
+            curl -L https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio-${{ github.event.inputs.cfitsio_version }}.tar.gz -o cfitsio.tar.gz
+            tar -xzf cfitsio.tar.gz
+            ren cfitsio-* cfitsio
+
+      - name: Build CFITSIO (DLL, Visual Studio)
+        run: |
+            mkdir cfitsio_build
+            cd cfitsio_build
+            cmake ../cfitsio -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}\cfitsio_install -DCMAKE_PREFIX_PATH=${{ github.workspace }}\zlib_install -DBUILD_SHARED_LIBS=ON -DUSE_CURL=OFF
+            cmake --build . --config Release
+            cmake --install . --config Release
 
       - name: Package binaries
-        shell: msys2 {0}
         run: |
-          cd cfitsio-install/bin
-          zip -r ../../windows-x86_64.zip cfitsio.dll
-          cd ../lib
-          zip -j ../../windows-x86_64.zip cfitsio.lib
+            cd cfitsio_install/bin
+            powershell Compress-Archive -Path cfitsio.dll -DestinationPath ../../windows-x86_64.zip
+            cd ../lib
+            powershell Compress-Archive -Path cfitsio.lib -DestinationPath ../../windows-x86_64.zip -Update
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-x86_64
-          path: windows-x86_64.zip
+            name: windows-x86_64
+            path: windows-x86_64.zip
 
   release:
     needs: [build-linux, build-macos, build-windows]
