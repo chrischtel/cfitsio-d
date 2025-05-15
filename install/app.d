@@ -237,47 +237,7 @@ struct Logger {
         writeln(console.highlight(msg));
     }
     
-    void progress(size_t dlTotal, size_t dlNow) {
-        if (quiet) return;
-        
-        enum width = 50;
-        auto percentage = dlTotal > 0 ? cast(int)(dlNow * 100 / dlTotal) : 0;
-        auto bars = dlTotal > 0 ? cast(int)(dlNow * width / dlTotal) : 0;
-        
-        // Clear the current line
-        console.clearLine();
-        
-        // Show progress bar with color based on completion
-        write("[");
-        for (int i = 0; i < width; i++) {
-            if (i < bars) {
-                if (percentage < 30)
-                    write(console.colored("█", ConsoleHelper.Color.red));
-                else if (percentage < 70)
-                    write(console.colored("█", ConsoleHelper.Color.yellow));
-                else
-                    write(console.colored("█", ConsoleHelper.Color.green));
-            } else {
-                write(" ");
-            }
-        }
-        
-        // Show percentage with bold formatting
-        write("] ");
-        write(console.bold(format("%3d%%", percentage)));
-        
-        // Show speed/ETA if enough data
-        if (dlTotal > 0 && dlNow > 1000) {
-            write(" " ~ console.dim(format("(%s/%s)", 
-                formatSize(dlNow), 
-                formatSize(dlTotal))));
-        }
-        
-        stdout.flush();
-        
-        if (dlNow >= dlTotal)
-            writeln();
-    }
+
     
     private string formatSize(size_t bytes) {
         if (bytes < 1024)
@@ -365,12 +325,6 @@ class CfitsioInstaller {
             if (config.proxyUrl !is null) {
                 http.proxy = config.proxyUrl;
             }
-            
-            // Set up progress callback
-            http.onProgress = (size_t dlTotal, size_t dlNow, size_t ulTotal, size_t ulNow) {
-                log.progress(dlTotal, dlNow);
-                return 0;
-            };
             
             download(url, tmpPath, http);
             rename(tmpPath, localArchivePath);
