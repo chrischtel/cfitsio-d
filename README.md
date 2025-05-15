@@ -41,7 +41,7 @@ In your `dub.json`:
 **In your `dub.sdl`:**
 
 ```sdl
-dependency "cfitsio-d" repository="https://github.com/chrischtel/cfitsio-d.git" version="<commit-hash>"
+dependency "cfitsio-d" repository="git+https://github.com/chrischtel/cfitsio-d.git" version="<commit-hash>"
 ```
 
 
