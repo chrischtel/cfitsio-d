@@ -119,10 +119,12 @@ jobs:
 
       - name: Package binaries
         run: |
-            cd cfitsio_install/bin
-            powershell Compress-Archive -Path cfitsio.dll -DestinationPath ../../windows-x86_64.zip
-            cd ../lib
-            powershell Compress-Archive -Path cfitsio.lib -DestinationPath ../../windows-x86_64.zip -Update
+            mkdir package
+            copy cfitsio_install\bin\cfitsio.dll package\
+            copy cfitsio_install\lib\cfitsio.lib package\
+            copy zlib_install\bin\zlib1.dll package\
+            copy zlib_install\lib\zlib.lib package\
+            powershell Compress-Archive -Path package\* -DestinationPath windows-x86_64.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
