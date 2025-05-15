@@ -1,0 +1,27 @@
+{
+    "authors": [ "Christian Brendlin" ],
+    "subPackages": [ "install" ],
+    "lflags-linux": [ "-rpath=$$ORIGIN" ],
+    "lflags-windows": [ "-L." ],
+    "versions": [ "Version1" ],
+    "license": "BSD-3-Clause",
+    "copyright": "Copyright © 2025 Christian Brendlin",
+    "name": "cfitsio-d",
+    "sourcePaths": [ "source" ],
+    "libs": [ "cfitsio" ],
+    "lflags-posix": [ "-L." ],
+    "description": "D bindings for the NASA CFITSIO library (C library for FITS files).",
+    "homepage": "https://github.com/chrischtel/cfitsio-d",
+    "configurations": [
+        {
+            "targetType": "library",
+            "name": "default"
+        }
+    ],
+    "dependencies": {
+
+	},
+    "targetType": "library",
+    "importPaths": [ "source" ],
+    "lflags-osx": [ "-rpath", "@executable_path/" ]
+}

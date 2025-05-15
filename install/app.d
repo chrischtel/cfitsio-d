@@ -16,7 +16,7 @@ import std.exception;
 import std.net.curl;
 import std.algorithm;
 import std.array;
-import std.zip;
+import std.zip : ZipArchive, ArchiveMember;
 import std.datetime;
 import std.system;
 
@@ -174,7 +174,7 @@ class CfitsioInstaller {
         
         version(Windows) {
             debug pragma(msg, "Windows detected");
-            return ["cfitsio.dll", "cfitsio.lib"];
+            return ["cfitsio.dll", "cfitsio.lib", "zlib.dll", "zlib.lib"];
         }
         else version(linux) {
             debug pragma(msg, "Linux detected");
@@ -256,26 +256,128 @@ class CfitsioInstaller {
             throw new Exception("Failed to extract library files: " ~ e.msg);
         }
     }
-    
-    private void extractZip(string zipPath, string[] files, string destDir) {
-        auto data = cast(ubyte[]) read(zipPath);
-        auto archive = new ZipArchive(data);
-        
-        foreach (file; files) {
+      private void extractZip(string zipPath, string[] files, string destDir) {
+            log.info("Reading ZIP archive: " ~ zipPath);
+            
+            // Try using an external tool (PowerShell) to extract the file instead of D's ZipArchive
+            log.info("Trying PowerShell extraction method...");
+            
             try {
-                // Find file in archive
-                auto member = file in archive.directory ? archive.directory[file] : null;
-                enforce(member !is null, "File " ~ file ~ " not found in archive!");
+                // Create PowerShell command to extract the files
+                string psCommand = "powershell -Command \"Expand-Archive -Path " ~ 
+                                  zipPath.replace("\\", "\\\\") ~ 
+                                  " -DestinationPath " ~ destDir.replace("\\", "\\\\") ~ 
+                                  " -Force\"";
                 
-                auto outPath = buildPath(destDir, file);
-                std.file.write(outPath, member.expandedData);
-                log.info("Extracted " ~ file ~ " to " ~ outPath);
-            } 
+                log.info("Executing: " ~ psCommand);
+                auto result = executeShell(psCommand);
+                
+                if (result.status != 0) {
+                    log.info("PowerShell extraction failed: " ~ result.output);
+                    throw new Exception("PowerShell extraction failed with status " ~ result.status.to!string);
+                }
+                
+                log.info("PowerShell extraction succeeded");
+                
+                // Verify files were extracted
+                foreach (file; files) {
+                    auto outPath = buildPath(destDir, file);
+                    if (!exists(outPath)) {
+                        // Try to find the file with a case-insensitive search
+                        bool found = false;
+                        foreach (string name; dirEntries(destDir, SpanMode.shallow)) {
+                            if (std.string.toLower(baseName(name)) == std.string.toLower(file)) {
+                                // Found file with different case, rename it
+                                log.info("Found file with different case: " ~ name);
+                                if (name != outPath) {
+                                    log.info("Renaming to correct case: " ~ outPath);
+                                    rename(name, outPath);
+                                }
+                                found = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!found) {
+                            throw new Exception("Expected file not extracted: " ~ file);
+                        }
+                    }
+                    
+                    auto fileSize = getSize(outPath);
+                    log.info("Verified " ~ file ~ " (" ~ fileSize.to!string ~ " bytes)");
+                    
+                    if (fileSize == 0) {
+                        log.info("Warning: File " ~ file ~ " is empty!");
+                    }
+                }
+            }
             catch (Exception e) {
-                throw new Exception("Failed to extract " ~ file ~ ": " ~ e.msg);
+                log.info("PowerShell extraction failed: " ~ e.msg);
+                log.info("Falling back to ZipArchive method...");
+                
+                // Fall back to the D ZipArchive method
+                auto data = cast(ubyte[]) read(zipPath);
+                log.info("ZIP archive size: " ~ data.length.to!string ~ " bytes");
+                
+                auto archive = new ZipArchive(data);
+                log.info("Archive contains " ~ archive.directory.length.to!string ~ " files");
+                
+                // Debug: List all files in archive
+                log.info("Files in archive:");
+                foreach (name; archive.directory.keys) {
+                    log.info(" - " ~ name ~ " (" ~ archive.directory[name].expandedSize.to!string ~ " bytes)");
+                }
+                
+                foreach (file; files) {
+                    log.info("Looking for " ~ file ~ " in archive...");
+                    ArchiveMember member = null;
+                    string foundName;
+                    
+                    // First try direct lookup
+                    if (file in archive.directory) {
+                        log.info("Found exact match: " ~ file);
+                        member = archive.directory[file];
+                        foundName = file;
+                    }
+                    else {
+                        // Try case-insensitive search and look for files in subdirectories too
+                        foreach (name, m; archive.directory) {
+                            if (std.string.toLower(name) == std.string.toLower(file) || 
+                                std.string.toLower(baseName(name)) == std.string.toLower(file)) {
+                                log.info("Found match: " ~ name);
+                                member = m;
+                                foundName = name;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    enforce(member !is null, "File " ~ file ~ " not found in archive!");
+                    auto outPath = buildPath(destDir, file);
+                    
+                    // Debug info
+                    log.info("Extracting " ~ foundName ~ " to " ~ file ~ " (compressed: " ~ member.compressedSize.to!string ~ 
+                            " bytes, expanded: " ~ member.expandedSize.to!string ~ " bytes)");
+                    
+                    // Try writing directly without using expandedData
+                    try {
+                        std.file.write(outPath, member.expandedData);
+                        log.info("Wrote " ~ member.expandedData.length.to!string ~ " bytes to " ~ outPath);
+                    } 
+                    catch (Exception e) {
+                        log.info("Error writing file: " ~ e.msg);
+                        throw new Exception("Failed to write " ~ file ~ ": " ~ e.msg);
+                    }
+                    
+                    auto fileSize = getSize(outPath);
+                    log.info("Extracted " ~ file ~ " (" ~ fileSize.to!string ~ " bytes)");
+                    
+                    if (fileSize == 0) {
+                        log.info("Warning: Extracted " ~ file ~ " is empty!");
+                    }
+                }
             }
         }
-    }
     private void extractTarGz(string tarGzPath, string[] files, string destDir) {
         // Use system tar for simplicity
         string cmd = format("tar -xzf %s -C %s %s", tarGzPath, destDir, files.join(" "));
