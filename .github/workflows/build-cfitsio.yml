@@ -103,6 +103,12 @@ jobs:
             tar -xzf cfitsio.tar.gz
             ren cfitsio-* cfitsio
 
+      - name: Patch CMakeLists.txt for CMake 3.5+
+        shell: pwsh
+        run: |
+            (Get-Content cfitsio/CMakeLists.txt) -replace 'cmake_minimum_required\(VERSION [0-9.]+\)', 'cmake_minimum_required(VERSION 3.5)' | Set-Content cfitsio/CMakeLists.txt
+
+
       - name: Build CFITSIO (DLL, Visual Studio)
         run: |
             mkdir cfitsio_build
