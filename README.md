@@ -24,17 +24,26 @@ This D package provides the bindings, not the C library itself.
 ## Quick Start (Recommended)
 
 ### 1. **Add as a Dependency**
-> Due to a bug I cannot register for the dub package registry so you cannot use dub add cfitsio-d so you need to manually add cfitsio with the repo url and commit hash to your dub.sdl or dub.json.
+> **Note:**  
+> Due to a current issue, `cfitsio-d` is **not yet available on the official DUB package registry**.  
+> You must add it manually to your `dub.json` or `dub.sdl` using the GitHub repository URL and a specific commit hash or branch.
 
 In your `dub.json`:
 ```json
     "dependencies": {
         "cfitsio-d": {
-            "version": "<your desired commit>", 
+            "version": "<commit-hash>", 
             "repository": "git+https://github.com/chrischtel/cfitsio-d.git"
         }
     },
 ```
+
+**In your `dub.sdl`:**
+
+```sdl
+dependency "cfitsio-d" repository="https://github.com/chrischtel/cfitsio-d.git" version="<commit-hash>"
+```
+
 
 ### 2. **Install the Native Library**
 
