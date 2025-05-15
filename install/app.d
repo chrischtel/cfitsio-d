@@ -356,8 +356,11 @@ class CfitsioInstaller {
                     auto outPath = buildPath(destDir, file);
                     
                     // Debug info
-                    log.info("Extracting " ~ foundName ~ " to " ~ file ~ " (compressed: " ~ member.compressedSize.to!string ~ 
-                            " bytes, expanded: " ~ member.expandedSize.to!string ~ " bytes)");
+                    log.info(
+                        "Extracting " ~ foundName ~ " to " ~ file ~
+                        " (compressed: " ~ member.compressedSize.to!string ~
+                        " bytes, expanded: " ~ member.expandedSize.to!string ~ " bytes)"
+                    );
                     
                     // Try writing directly without using expandedData
                     try {
@@ -423,26 +426,27 @@ class CfitsioInstaller {
             }
             
             auto libs = json["libs"].array;
-            bool found = false;
+            bool foundLib = false;
             foreach (lib; libs) {
                 if (lib.type == JSONType.string && lib.str == "cfitsio") {
-                    found = true;
+                    foundLib = true;
                     break;
                 }
             }
             
-            if (!found) {
+            if (!foundLib) {
                 libs ~= JSONValue("cfitsio");
                 json["libs"] = JSONValue(libs);
                 changed = true;
             }
 
-            // Add necessary linker flags
+            // Set linker flags to use the configured output directory
+            string outDir = config.outputDir;
             string[][string] flags = [
-                "lflags-windows": ["-L."],
-                "lflags-posix": ["-L."],
-                "lflags-osx": ["-rpath", "@executable_path/"],
-                "lflags-linux": ["-rpath=$$ORIGIN"]
+                "lflags-windows": ["/LIBPATH:" ~ outDir],
+                "lflags-posix": ["-L" ~ outDir],
+                "lflags-osx": ["-rpath", "@executable_path/", "-L" ~ outDir],
+                "lflags-linux": ["-rpath=$$ORIGIN", "-L" ~ outDir]
             ];
             
             foreach (k, v; flags) {
