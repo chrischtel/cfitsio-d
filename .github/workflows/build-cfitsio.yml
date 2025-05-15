@@ -51,7 +51,7 @@ jobs:
         run: |
           curl -L https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio-${{ github.event.inputs.cfitsio_version }}.tar.gz -o cfitsio.tar.gz
           tar xzf cfitsio.tar.gz
-          mv cfitsio* cfitsio
+          mv $(find . -maxdepth 1 -type d -name "cfitsio-*") cfitsio
 
       - name: Build CFITSIO
         run: |
@@ -89,13 +89,19 @@ jobs:
       - name: Download and Build CFITSIO
         shell: msys2 {0}
         run: |
-          wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio-${{ github.event.inputs.cfitsio_version }}.tar.gz -O cfitsio.tar.gz
-          tar xzf cfitsio.tar.gz
-          mv cfitsio* cfitsio
-          cd cfitsio
-          ./configure --prefix=$PWD/../cfitsio-install
-          make -j$(nproc)
-          make install
+            wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio-${{ github.event.inputs.cfitsio_version }}.tar.gz -O cfitsio.tar.gz
+            tar xzf cfitsio.tar.gz
+            # Find the extracted directory dynamically
+            extracted_dir=$(find . -maxdepth 1 -type d -name "cfitsio*")
+            if [[ -z "$extracted_dir" ]]; then
+            echo "Error: Extracted directory not found!" >&2
+            exit 1
+            fi
+            mv "$extracted_dir" cfitsio
+            cd cfitsio
+            ./configure --prefix=$PWD/../cfitsio-install
+            make -j$(nproc)
+            make install
 
       - name: Package binaries
         shell: msys2 {0}
