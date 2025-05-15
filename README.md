@@ -254,7 +254,7 @@ To update to a new CFITSIO version:
 
 ## License
 
-MIT (see LICENSE file)
+SEE [LICENSE](LICENSE) FILE
 
 ---
 
