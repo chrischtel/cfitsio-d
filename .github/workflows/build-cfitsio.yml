@@ -85,7 +85,7 @@ jobs:
 
       - name: Download and extract zlib
         run: |
-            curl -L https://zlib.net/zlib1213.zip -o zlib.zip
+            curl -L https://www.zlib.net/zlib131.zip -o zlib.zip
             tar -xf zlib.zip || powershell -Command "Expand-Archive -Path zlib.zip -DestinationPath ."
             ren zlib-* zlib
 
