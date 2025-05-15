@@ -113,7 +113,7 @@ jobs:
         run: |
             mkdir cfitsio_build
             cd cfitsio_build
-            cmake ../cfitsio -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}\cfitsio_install -DCMAKE_PREFIX_PATH=${{ github.workspace }}\zlib_install -DBUILD_SHARED_LIBS=ON -DUSE_CURL=OFF
+            cmake ../cfitsio -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}\cfitsio_install -DCMAKE_PREFIX_PATH=${{ github.workspace }}\zlib_install -DBUILD_SHARED_LIBS=ON -DUSE_CURL=OFF -DUTILS=OFF
             cmake --build . --config Release
             cmake --install . --config Release
 
