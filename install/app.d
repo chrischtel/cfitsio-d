@@ -522,6 +522,10 @@ class CfitsioInstaller {
             auto content = readText(dubJsonPath);
             auto json = parseJSON(content);
             bool changed = false;
+
+            if(changed == false) {
+                config.backupFiles = false; // Disable backup if no changes are made
+            }
             
             // Create a backup of dub.json
             if (config.backupFiles) {
