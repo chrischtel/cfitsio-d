@@ -1,4 +1,13 @@
 # cfitsio-d
+![GitHub License](https://img.shields.io/github/license/chrischtel/cfitsio-d)
+![CFITSIO](https://img.shields.io/badge/CFITSIO-4.6.2-blue)
+[![GitHub last commit](https://img.shields.io/github/last-commit/chrischtel/cfitsio-d.svg)](https://github.com/chrischtel/cfitsio-d/commits/master)
+![Maintenance](https://img.shields.io/maintenance/yes/2025)
+[![GitHub release](https://img.shields.io/github/release/chrischtel/cfitsio-d.svg)](https://github.com/chrischtel/cfitsio-d/releases)
+![Open Source Love](https://img.shields.io/badge/Open%20Source-%E2%9D%A4-red.svg)
+
+
+--- 
 
 D bindings for the [CFITSIO](https://heasarc.gsfc.nasa.gov/fitsio/) C library, which provides high-level routines for reading and writing FITS (Flexible Image Transport System) files.
 
