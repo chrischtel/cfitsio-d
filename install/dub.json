@@ -1,0 +1,8 @@
+{
+  "name": "install",
+  "description": "Helper tool to install the correct CFITSIO library for your platform.",
+  "targetType": "executable",
+  "sourcePaths": ["."],
+  "authors": ["Christian Brendlin"],
+  "license": "BSD-3-Clause"
+}

@@ -1,0 +1,145 @@
+name: Build and Release CFITSIO Binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      cfitsio_version:
+        description: 'CFITSIO version (e.g. 4.4.0)'
+        required: true
+        default: '4.4.0'
+      release_tag:
+        description: 'Release tag (e.g. v4.4.0)'
+        required: true
+        default: 'v4.4.0'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y wget build-essential cmake
+
+      - name: Download CFITSIO
+        run: |
+          wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio${{ github.event.inputs.cfitsio_version }}.tar.gz -O cfitsio.tar.gz
+          tar xzf cfitsio.tar.gz
+          mv cfitsio* cfitsio
+
+      - name: Build CFITSIO
+        run: |
+          cd cfitsio
+          ./configure --prefix=$PWD/../cfitsio-install
+          make -j$(nproc)
+          make install
+
+      - name: Package binaries
+        run: |
+          cd cfitsio-install/lib
+          tar czf ../../linux-x86_64.tar.gz libcfitsio.so*
+          cd ../../
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64
+          path: linux-x86_64.tar.gz
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Download CFITSIO
+        run: |
+          curl -L https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio${{ github.event.inputs.cfitsio_version }}.tar.gz -o cfitsio.tar.gz
+          tar xzf cfitsio.tar.gz
+          mv cfitsio* cfitsio
+
+      - name: Build CFITSIO
+        run: |
+          cd cfitsio
+          ./configure --prefix=$PWD/../cfitsio-install
+          make -j$(sysctl -n hw.ncpu)
+          make install
+
+      - name: Package binaries
+        run: |
+          cd cfitsio-install/lib
+          tar czf ../../macos-x86_64.tar.gz libcfitsio.dylib*
+          cd ../../
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-x86_64
+          path: macos-x86_64.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Install MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-x86_64-toolchain
+            make
+            tar
+            wget
+
+      - name: Download and Build CFITSIO
+        shell: msys2 {0}
+        run: |
+          wget https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio${{ github.event.inputs.cfitsio_version }}.tar.gz -O cfitsio.tar.gz
+          tar xzf cfitsio.tar.gz
+          mv cfitsio* cfitsio
+          cd cfitsio
+          ./configure --prefix=$PWD/../cfitsio-install
+          make -j$(nproc)
+          make install
+
+      - name: Package binaries
+        shell: msys2 {0}
+        run: |
+          cd cfitsio-install/bin
+          zip -r ../../windows-x86_64.zip cfitsio.dll
+          cd ../lib
+          zip -j ../../windows-x86_64.zip cfitsio.lib
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x86_64
+          path: windows-x86_64.zip
+
+  release:
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          name: CFITSIO ${{ github.event.inputs.cfitsio_version }} Binaries
+          body: |
+            Prebuilt CFITSIO binaries for use with cfitsio-d.
+            - Linux: `linux-x86_64.tar.gz`
+            - macOS: `macos-x86_64.tar.gz`
+            - Windows: `windows-x86_64.zip`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          files: |
+            artifacts/linux-x86_64/linux-x86_64.tar.gz
+            artifacts/macos-x86_64/macos-x86_64.tar.gz
+            artifacts/windows-x86_64/windows-x86_64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
