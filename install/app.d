@@ -19,6 +19,7 @@ import std.array;
 import std.zip : ZipArchive, ArchiveMember;
 import std.datetime;
 import std.system;
+import std.format;
 
 // Platform detection
 version(Windows)
@@ -41,6 +42,94 @@ else version(ARM)
     enum arch = "arm";
 else
     static assert(0, "Unsupported architecture");
+
+/**
+ * Console colors and formatting
+ */
+struct ConsoleHelper {
+    static enum Color {
+        black   = 0,
+        red     = 1,
+        green   = 2,
+        yellow  = 3,
+        blue    = 4,
+        magenta = 5,
+        cyan    = 6,
+        white   = 7,
+        default_ = 9
+    }
+
+    static enum Style {
+        reset     = 0,
+        bold      = 1,
+        dim       = 2,
+        italic    = 3,
+        underline = 4,
+        blink     = 5,
+        inverse   = 7,
+    }
+
+    private bool useColors;
+
+    this(bool enableColors) {
+        version(Windows) {
+            // Enable ANSI escape sequence processing on Windows
+            try {
+                auto result = executeShell("powershell -Command \"if ($Host.UI.RawUI.WindowSize.Width -eq 0) { exit 1 } else { exit 0 }\"");
+                useColors = enableColors && result.status == 0;
+            } catch (Exception) {
+                useColors = false;
+            }
+        } else {
+            useColors = enableColors;
+        }
+    }
+
+    string colored(string text, Color fg, Color bg = Color.default_, Style style = Style.reset) {
+        if (!useColors) return text;
+        
+        return format("\033[%d;%d;%dm%s\033[0m", 
+            style, 
+            30 + cast(int)fg, 
+            40 + cast(int)bg,
+            text);
+    }
+
+    string bold(string text, Color color = Color.default_) {
+        return colored(text, color, Color.default_, Style.bold);
+    }
+
+    string dim(string text, Color color = Color.default_) {
+        return colored(text, color, Color.default_, Style.dim);
+    }
+
+    string success(string text) {
+        return bold(text, Color.green);
+    }
+
+    string error(string text) {
+        return bold(text, Color.red);
+    }
+
+    string warning(string text) {
+        return bold(text, Color.yellow);
+    }
+
+    string info(string text) {
+        return bold(text, Color.cyan);
+    }
+    
+    string highlight(string text) {
+        return bold(text, Color.magenta);
+    }
+    
+    void clearLine() {
+        if (useColors) {
+            write("\033[2K\r");  // Clear entire line and move cursor to beginning
+            stdout.flush();
+        }
+    }
+}
 
 struct Config {
     string version_ = "4.6.2";
@@ -69,21 +158,19 @@ void main(string[] args)
         "no-backup", "Don't create backups of existing files", &config.backupFiles,
         "proxy", "Proxy URL to use for downloads", &config.proxyUrl,
         "help|h", "Show this help", &showHelp
-    );
-
-    auto log = Logger(config.quiet);
+    );    auto log = Logger(config.quiet);
     
     if (showHelp) {
-        log.info("cfitsio-d install script");
+        log.header("cfitsio-d install script");
         log.info("Platform: " ~ platform ~ "-" ~ arch);
         log.info("");
         defaultGetoptPrinter("Usage: dub run cfitsio-d:install [options]", helpInfo.options);
         return;
     }
 
-    log.info("cfitsio-d install script");
+    log.header("cfitsio-d install script");
     log.info("Platform: " ~ platform ~ "-" ~ arch);
-    log.info("CFITSIO version: " ~ config.version_);
+    log.highlight("CFITSIO version: " ~ config.version_);
     
     try {
         // Ensure output directory exists
@@ -92,27 +179,62 @@ void main(string[] args)
     
         // Calculate file paths and URLs
         auto installer = new CfitsioInstaller(config);
-        
-        // Install the library
+          // Install the library
         installer.install();
         
         // Update dub.json if requested
         if (config.updateDub)
             installer.updateDubJson();
             
-        log.info("Done! You can now build your project with cfitsio-d.");
-    }
-    catch (Exception e) {
-        stderr.writefln("Error: %s", e.msg);
+        log.success("Done! You can now build your project with cfitsio-d.");
+    }    catch (Exception e) {
+        log.error("Error: " ~ e.msg);
         return;
     }
 }
 
 struct Logger {
     bool quiet;
+    ConsoleHelper console;
+    
+    this(bool quiet) {
+        this.quiet = quiet;
+        this.console = ConsoleHelper(!quiet);
+    }
     
     void info(string msg) {
-        if (!quiet) writeln(msg);
+        if (quiet) return;
+        writeln(msg);
+    }
+    
+    void success(string msg) {
+        if (quiet) return;
+        writeln(console.success(msg));
+    }
+    
+    void error(string msg) {
+        // Errors are always shown, even in quiet mode
+        stderr.writeln(console.error(msg));
+    }
+    
+    void warning(string msg) {
+        if (quiet) return;
+        writeln(console.warning(msg));
+    }
+    
+    void header(string msg) {
+        if (quiet) return;
+        writeln(console.bold(msg));
+    }
+    
+    void detail(string msg) {
+        if (quiet) return;
+        writeln(console.dim("  " ~ msg));
+    }
+    
+    void highlight(string msg) {
+        if (quiet) return;
+        writeln(console.highlight(msg));
     }
     
     void progress(size_t dlTotal, size_t dlNow) {
@@ -122,14 +244,50 @@ struct Logger {
         auto percentage = dlTotal > 0 ? cast(int)(dlNow * 100 / dlTotal) : 0;
         auto bars = dlTotal > 0 ? cast(int)(dlNow * width / dlTotal) : 0;
         
-        write("\r[");
-        for (int i = 0; i < width; i++)
-            write(i < bars ? "#" : " ");
-        writef("] %3d%%", percentage);
+        // Clear the current line
+        console.clearLine();
+        
+        // Show progress bar with color based on completion
+        write("[");
+        for (int i = 0; i < width; i++) {
+            if (i < bars) {
+                if (percentage < 30)
+                    write(console.colored("█", ConsoleHelper.Color.red));
+                else if (percentage < 70)
+                    write(console.colored("█", ConsoleHelper.Color.yellow));
+                else
+                    write(console.colored("█", ConsoleHelper.Color.green));
+            } else {
+                write(" ");
+            }
+        }
+        
+        // Show percentage with bold formatting
+        write("] ");
+        write(console.bold(format("%3d%%", percentage)));
+        
+        // Show speed/ETA if enough data
+        if (dlTotal > 0 && dlNow > 1000) {
+            write(" " ~ console.dim(format("(%s/%s)", 
+                formatSize(dlNow), 
+                formatSize(dlTotal))));
+        }
+        
         stdout.flush();
         
         if (dlNow >= dlTotal)
             writeln();
+    }
+    
+    private string formatSize(size_t bytes) {
+        if (bytes < 1024)
+            return format("%d B", bytes);
+        else if (bytes < 1024 * 1024)
+            return format("%.2f KB", bytes / 1024.0);
+        else if (bytes < 1024 * 1024 * 1024)
+            return format("%.2f MB", bytes / (1024.0 * 1024.0));
+        else
+            return format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
     }
 }
 
@@ -140,8 +298,7 @@ class CfitsioInstaller {
     private string archiveName;
     private string[] libraryFiles;
     private string localArchivePath;
-    
-    this(Config config) {
+      this(Config config) {
         this.config = config;
         this.log = Logger(config.quiet);
         
@@ -164,7 +321,7 @@ class CfitsioInstaller {
             try {
                 remove(localArchivePath);
             } catch (Exception e) {
-                log.info("Warning: Could not remove archive file: " ~ e.msg);
+                log.warning("Could not remove archive file: " ~ e.msg);
             }
         }
     }
@@ -240,7 +397,7 @@ class CfitsioInstaller {
                         rename(destPath, backupPath);
                     } 
                     catch (Exception e) {
-                        log.info("Warning: Could not create backup: " ~ e.msg);
+                        log.warning("Could not create backup: " ~ e.msg);
                     }
                 }
             }
@@ -304,10 +461,9 @@ class CfitsioInstaller {
                     }
                     
                     auto fileSize = getSize(outPath);
-                    log.info("Verified " ~ file ~ " (" ~ fileSize.to!string ~ " bytes)");
-                    
-                    if (fileSize == 0) {
-                        log.info("Warning: File " ~ file ~ " is empty!");
+                    log.success("Verified " ~ file ~ " (" ~ fileSize.to!string ~ " bytes)");
+                      if (fileSize == 0) {
+                        log.warning("File " ~ file ~ " is empty!");
                     }
                 }
             }
@@ -376,7 +532,7 @@ class CfitsioInstaller {
                     log.info("Extracted " ~ file ~ " (" ~ fileSize.to!string ~ " bytes)");
                     
                     if (fileSize == 0) {
-                        log.info("Warning: Extracted " ~ file ~ " is empty!");
+                        log.warning("Extracted " ~ file ~ " is empty!");
                     }
                 }
             }
@@ -476,14 +632,14 @@ class CfitsioInstaller {
             if (changed) {
                 // Format JSON with indentation for better readability
                 std.file.write(dubJsonPath, toPrettyJson(json));
-                log.info("Updated dub.json successfully.");
+                log.success("Updated dub.json successfully.");
             } 
             else {
                 log.info("dub.json already contains correct configuration.");
             }
         } 
         catch (Exception e) {
-            log.info("Warning: Failed to update dub.json: " ~ e.msg);
+            log.warning("Failed to update dub.json: " ~ e.msg);
         }
     }
 
