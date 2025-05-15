@@ -6,11 +6,11 @@ on:
       cfitsio_version:
         description: 'CFITSIO version (e.g. 4.4.0)'
         required: true
-        default: '4.4.0'
+        default: '4.6.2'
       release_tag:
         description: 'Release tag (e.g. v4.4.0)'
         required: true
-        default: 'v4.4.0'
+        default: 'cfitsio-4.6.2'
 
 jobs:
   build-linux:
