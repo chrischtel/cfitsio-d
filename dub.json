@@ -18,7 +18,9 @@
             "name": "default"
         }
     ],
-    "dependencies": {},
+    "dependencies": {
+
+	},
     "targetType": "library",
     "importPaths": [ "source" ],
     "lflags-osx": [ "-rpath", "@executable_path/" ]
