@@ -139,7 +139,7 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create Release
+      - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
@@ -149,13 +149,6 @@ jobs:
             - Linux: `linux-x86_64.tar.gz`
             - macOS: `macos-x86_64.tar.gz`
             - Windows: `windows-x86_64.zip`
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Release Assets
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.release_tag }}
           files: |
             artifacts/linux-x86_64/linux-x86_64.tar.gz
             artifacts/macos-x86_64/macos-x86_64.tar.gz
